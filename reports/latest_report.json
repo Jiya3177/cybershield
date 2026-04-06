@@ -1,0 +1,166 @@
+{
+  "timestamp": "2026-04-06 14:10:38",
+  "system_health": 95,
+  "threat_score": 59,
+  "patched_vulnerabilities": 6,
+  "defense_events_triggered": 32,
+  "findings": [
+    {
+      "id": "vuln-1",
+      "title": "Ingress Reconnaissance Exposure",
+      "severity": "medium",
+      "signature": "Repeated port scan activity against exposed services",
+      "recommended_patch": "Harden ingress ACLs, restrict management ports, and rotate exposed service bindings.",
+      "validation_tests": [
+        "test_port_scan_signature",
+        "test_recon_defense_guardrails"
+      ],
+      "health_penalty": 4,
+      "exploit_count": 53,
+      "detected": true,
+      "patched": true,
+      "patch_status": "deployed",
+      "last_detected": 1775464826.195731,
+      "last_patched": 1775464767.70385,
+      "evidence": [
+        "port_scan from 94.72.71.98 severity medium"
+      ],
+      "generated_patch": "# Patch plan for vuln-1: Ingress Reconnaissance Exposure\n# Severity: medium\ndef apply_patch(control_plane):\n    control_plane.enable_guardrail('vuln-1')\n    control_plane.enforce('Harden ingress ACLs, restrict management ports, and rotate exposed service bindings.')\n    return 'patched'\n",
+      "risk_score": 424
+    },
+    {
+      "id": "vuln-2",
+      "title": "Traffic Burst Saturation",
+      "severity": "high",
+      "signature": "Burst DDoS pattern targeting shared infrastructure",
+      "recommended_patch": "Apply rate limiting, upstream traffic shaping, and autoscaling thresholds.",
+      "validation_tests": [
+        "test_ddos_throttle_patch",
+        "test_rate_limit_protection"
+      ],
+      "health_penalty": 7,
+      "exploit_count": 91,
+      "detected": true,
+      "patched": true,
+      "patch_status": "deployed",
+      "last_detected": 1775464838.20484,
+      "last_patched": 1775464765.678041,
+      "evidence": [
+        "ddos from 106.92.202.59 severity high",
+        "ddos from 79.67.120.187 severity low"
+      ],
+      "generated_patch": "# Patch plan for vuln-2: Traffic Burst Saturation\n# Severity: high\ndef apply_patch(control_plane):\n    control_plane.enable_guardrail('vuln-2')\n    control_plane.enforce('Apply rate limiting, upstream traffic shaping, and autoscaling thresholds.')\n    return 'patched'\n",
+      "risk_score": 1911
+    },
+    {
+      "id": "vuln-3",
+      "title": "Credential Harvesting Gap",
+      "severity": "medium",
+      "signature": "Phishing indicators mapped to weak input validation or auth flow checks",
+      "recommended_patch": "Enforce stronger auth validation, outbound filtering, and suspicious session revocation.",
+      "validation_tests": [
+        "test_phishing_detection",
+        "test_auth_defense_barrier"
+      ],
+      "health_penalty": 5,
+      "exploit_count": 47,
+      "detected": true,
+      "patched": true,
+      "patch_status": "deployed",
+      "last_detected": 1775464781.14209,
+      "last_patched": 1775464762.649567,
+      "evidence": [
+        "phishing from 87.50.118.111 severity high"
+      ],
+      "generated_patch": "# Patch plan for vuln-3: Credential Harvesting Gap\n# Severity: medium\ndef apply_patch(control_plane):\n    control_plane.enable_guardrail('vuln-3')\n    control_plane.enforce('Enforce stronger auth validation, outbound filtering, and suspicious session revocation.')\n    return 'patched'\n",
+      "risk_score": 470
+    },
+    {
+      "id": "vuln-4",
+      "title": "Exfiltration Monitoring Blind Spot",
+      "severity": "high",
+      "signature": "Data exfiltration pattern bypassing traffic inspection",
+      "recommended_patch": "Expand egress anomaly detection and lock sensitive data channels.",
+      "validation_tests": [
+        "test_exfiltration_block",
+        "test_sensitive_channel_monitoring"
+      ],
+      "health_penalty": 8,
+      "exploit_count": 62,
+      "detected": true,
+      "patched": true,
+      "patch_status": "deployed",
+      "last_detected": 1775464838.20484,
+      "last_patched": 1775464777.139461,
+      "evidence": [
+        "data_exfiltration from 132.79.103.201 severity high",
+        "data_exfiltration from 208.215.243.151 severity high"
+      ],
+      "generated_patch": "# Patch plan for vuln-4: Exfiltration Monitoring Blind Spot\n# Severity: high\ndef apply_patch(control_plane):\n    control_plane.enable_guardrail('vuln-4')\n    control_plane.enforce('Expand egress anomaly detection and lock sensitive data channels.')\n    return 'patched'\n",
+      "risk_score": 1488
+    },
+    {
+      "id": "vuln-5",
+      "title": "Malware Persistence Chain",
+      "severity": "high",
+      "signature": "Malware persistence indicators linked to missing remediation hooks",
+      "recommended_patch": "Apply anti-malware remediation hooks and isolate persistence artifacts automatically.",
+      "validation_tests": [
+        "test_vuln_5_patch_pipeline",
+        "test_malware_remediation"
+      ],
+      "health_penalty": 10,
+      "exploit_count": 37,
+      "detected": true,
+      "patched": true,
+      "patch_status": "deployed",
+      "last_detected": 1775464838.20484,
+      "last_patched": 1775464761.638942,
+      "evidence": [
+        "malware from 150.87.160.148 severity medium",
+        "malware from 250.108.68.18 severity medium"
+      ],
+      "generated_patch": "# Patch plan for vuln-5: Malware Persistence Chain\n# Severity: high\ndef apply_patch(control_plane):\n    control_plane.enable_guardrail('vuln-5')\n    control_plane.enforce('Apply anti-malware remediation hooks and isolate persistence artifacts automatically.')\n    return 'patched'\n",
+      "risk_score": 1110
+    },
+    {
+      "id": "vuln-6",
+      "title": "Ransomware Escalation Path",
+      "severity": "critical",
+      "signature": "Ransomware execution path combined with data staging behavior",
+      "recommended_patch": "Deploy rapid file isolation, execution containment, and restore safety controls.",
+      "validation_tests": [
+        "test_vuln_6_patch_pipeline",
+        "test_ransomware_containment"
+      ],
+      "health_penalty": 12,
+      "exploit_count": 128,
+      "detected": true,
+      "patched": true,
+      "patch_status": "deployed",
+      "last_detected": 1775464838.20484,
+      "last_patched": 1775464761.1267898,
+      "evidence": [
+        "data_exfiltration from 132.79.103.201 severity high",
+        "data_exfiltration from 208.215.243.151 severity high"
+      ],
+      "generated_patch": "# Patch plan for vuln-6: Ransomware Escalation Path\n# Severity: critical\ndef apply_patch(control_plane):\n    control_plane.enable_guardrail('vuln-6')\n    control_plane.enforce('Deploy rapid file isolation, execution containment, and restore safety controls.')\n    return 'patched'\n",
+      "risk_score": 6144
+    }
+  ],
+  "latest_patch_result": {
+    "vulnerability_id": "vuln-4",
+    "environment": "staging",
+    "generated_patch": "# Patch plan for vuln-4: Exfiltration Monitoring Blind Spot\n# Severity: high\ndef apply_patch(control_plane):\n    control_plane.enable_guardrail('vuln-4')\n    control_plane.enforce('Expand egress anomaly detection and lock sensitive data channels.')\n    return 'patched'\n",
+    "validation_passed": true,
+    "validation_tests": [
+      "test_exfiltration_block",
+      "test_sensitive_channel_monitoring"
+    ],
+    "deployed_to": [
+      "staging",
+      "production"
+    ],
+    "timestamp": 1775464777.139461
+  }
+}

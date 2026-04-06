@@ -1,0 +1,34 @@
+name: cyber_shield_env
+
+description: |
+  CyberShield is an AI cyber attack defence simulator.
+  Agents must detect malicious activity in network logs
+  and respond using defensive actions like blocking IPs,
+  patching vulnerabilities, and monitoring traffic.
+
+entrypoint: environment:CyberShieldEnv
+
+actions:
+  type: discrete
+  values:
+    - scan_network
+    - block_ip
+    - patch_vulnerability
+    - monitor_traffic
+
+observations:
+  type: object
+  properties:
+    step:
+      type: integer
+    logs:
+      type: array
+    system_health:
+      type: integer
+    blocked_ips:
+      type: array
+
+tasks:
+  - tasks.easy_task:easy_task
+  - tasks.medium_task:medium_task
+  - tasks.hard_task:hard_task
