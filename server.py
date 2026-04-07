@@ -59,9 +59,14 @@ async def shutdown_event():
 @app.get("/")
 def root():
     return {
-        "status": "CyberShield OpenEnv running",
+        "status": "CyberShield API running",
+        "service": "CyberShield OpenEnv",
         "docs": "/docs",
-        "endpoints": ["/reset", "/step", "/state"]
+        "endpoints": [
+            "/state",
+            "/reset",
+            "/step"
+        ]
     }
 
 
