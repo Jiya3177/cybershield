@@ -7,10 +7,10 @@ from vulnerability_manager import SEVERITY_RANK
 
 
 ACTION_COOLDOWNS = {
-    "patch_vulnerability": 8,
-    "block_ip": 12,
-    "scan_network": 4,
-    "monitor_traffic": 4,
+    "patch_vulnerability": 10,
+    "block_ip": 16,
+    "scan_network": 8,
+    "monitor_traffic": 8,
 }
 
 
@@ -92,11 +92,11 @@ def choose_action(
 
 def adaptive_interval(system_health: int, threat_score: int, rapid_health_drop: bool) -> int:
     if rapid_health_drop or system_health < 30:
-        return random.randint(8, 12)
+        return random.randint(10, 14)
     if system_health < 50:
-        return 5
+        return 10
     if threat_score > 70:
-        return 3
+        return 8
     if threat_score > 40:
-        return 4
-    return 3
+        return 9
+    return 8
