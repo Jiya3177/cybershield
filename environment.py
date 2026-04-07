@@ -6,8 +6,10 @@ import threading
 import time
 from collections import Counter
 from pathlib import Path
+from typing import Any
 
 from ai_automation import ACTION_COOLDOWNS, adaptive_interval, analyze_threats as automation_analyze_threats, choose_action
+from reward_utils import normalize_reward
 from synthetic_logs import generate_log, generate_logs
 from vulnerability_manager import VulnerabilityManager
 
@@ -43,11 +45,40 @@ class CyberShieldEnv:
         self.reports_dir.mkdir(parents=True, exist_ok=True)
         self.vulnerability_manager = VulnerabilityManager(self.reports_dir)
         self.actions = ["scan_network", "block_ip", "patch_vulnerability", "monitor_traffic"]
+        self.agent_profile = {
+            "agent_name": "CyberShield Sentinel",
+            "display_preferences": {
+                "high_contrast_charts": True,
+                "compact_mode": False,
+                "map_focus": "india",
+            },
+        }
+        self.cumulative_score = 0.0
+        self.latest_reward = 0.0
+        self.latest_raw_reward = 0.0
+        self.active_task: dict[str, Any] = {
+            "task_name": "free_play",
+            "description": "Default CyberShield autonomous monitoring scenario",
+            "max_steps": 20,
+            "seed": None,
+        }
+        self.pending_task_config: dict[str, Any] | None = None
         self.reset()
+
+    def configure_task(self, task_config: dict[str, Any] | None):
+        with self.lock:
+            self.pending_task_config = dict(task_config) if task_config else None
+            return self.pending_task_config
 
     def reset(self):
         with self.lock:
-            self.logs = generate_logs(6)
+            task_config = self.pending_task_config or self.active_task
+            seed = task_config.get("seed")
+            if seed is not None:
+                random.seed(seed)
+
+            initial_logs = task_config.get("initial_logs")
+            self.logs = list(initial_logs) if initial_logs else generate_logs(6)
             self.current_step = 0
             self.system_health = 100
             self.blocked_ips = set()
@@ -65,6 +96,15 @@ class CyberShieldEnv:
             self.patched_vulnerabilities = 0
             self.latest_patch_result = None
             self.latest_report_paths = {}
+            self.latest_reward = 0.0
+            self.latest_raw_reward = 0.0
+            self.active_task = {
+                "task_name": task_config.get("task_name", "free_play"),
+                "description": task_config.get("description", "Default CyberShield autonomous monitoring scenario"),
+                "max_steps": task_config.get("max_steps", 20),
+                "seed": seed,
+                "target_health": task_config.get("target_health"),
+            }
             self.vulnerability_manager.reset()
             self._refresh_observability(scan_results=[])
             return self._snapshot()
@@ -92,6 +132,31 @@ class CyberShieldEnv:
             "defense_events_triggered": self.defense_events_triggered,
             "latest_patch_result": self.latest_patch_result,
             "automation_reports": self.latest_report_paths,
+            "agent_profile": self.agent_profile,
+            "cumulative_score": round(self.cumulative_score, 4),
+            "latest_reward": self.latest_reward,
+            "latest_raw_reward": self.latest_raw_reward,
+            "active_task": self.active_task,
+        }
+
+    def update_settings(self, agent_name=None, display_preferences=None):
+        with self.lock:
+            if agent_name:
+                self.agent_profile["agent_name"] = str(agent_name).strip()[:48] or self.agent_profile["agent_name"]
+
+            if isinstance(display_preferences, dict):
+                self.agent_profile["display_preferences"].update(display_preferences)
+
+            return self._snapshot()
+
+    def task_result(self):
+        return {
+            "task_name": self.active_task["task_name"],
+            "cumulative_score": round(self.cumulative_score, 4),
+            "final_health": self.system_health,
+            "blocked_ips": len(self.blocked_ips),
+            "patched_vulnerabilities": self.patched_vulnerabilities,
+            "steps_taken": self.current_step,
         }
 
     def _refresh_observability(self, scan_results=None):
@@ -209,6 +274,21 @@ class CyberShieldEnv:
         self._record_action(action, target=target_vuln_id, reason=reason)
         return reward
 
+    def _stabilize_system_health(self, action):
+        # Keep the defense platform in an operational band instead of letting health collapse.
+        if action == "patch_vulnerability":
+            self.system_health = min(100, self.system_health + 10)
+        elif action in SAFE_ACTIONS:
+            self.system_health = min(100, self.system_health + 6)
+        elif action == "block_ip":
+            self.system_health = min(100, self.system_health + 4)
+
+        if self.system_health < 60:
+            self.system_health = min(100, self.system_health + 8)
+
+        if self.system_health < 45:
+            self.system_health = 60
+
     def _calculate_attack_impact(self, action):
         if not self.logs:
             return 0
@@ -240,7 +320,7 @@ class CyberShieldEnv:
         if attack_log.get("source_ip") in ddos_rate_limited:
             impact = max(0, impact - 2)
 
-        return impact
+        return min(impact, 8)
 
     def _report_payload(self):
         return {
@@ -249,6 +329,8 @@ class CyberShieldEnv:
             "threat_score": self.threat_score,
             "patched_vulnerabilities": self.patched_vulnerabilities,
             "defense_events_triggered": self.defense_events_triggered,
+            "cumulative_score": round(self.cumulative_score, 4),
+            "latest_reward": self.latest_reward,
             "findings": self.vulnerability_manager.findings_as_list(),
             "latest_patch_result": self.latest_patch_result,
         }
@@ -267,6 +349,8 @@ class CyberShieldEnv:
 
             self.last_decision_reason = reason
             if action is None:
+                self._stabilize_system_health("monitor_traffic")
+                self._refresh_observability(scan_results=self._generate_ci_scan_results())
                 self.ai_interval_seconds = adaptive_interval(
                     self.system_health,
                     self.threat_score,
@@ -288,15 +372,20 @@ class CyberShieldEnv:
 
             previous_health = self.system_health
             previous_threat = self.threat_score
-            reward = self._apply_action_effect(action, reason=reason, target_vuln_id=target_vuln_id)
+            raw_reward = self._apply_action_effect(action, reason=reason, target_vuln_id=target_vuln_id)
             impact = self._calculate_attack_impact(action)
             self.system_health = max(0, min(100, self.system_health - impact))
+            self._stabilize_system_health(action)
             self.current_step += 1
             self._refresh_observability(scan_results=self._generate_ci_scan_results())
             improvement_bonus = max(previous_threat - self.threat_score, 0) * 0.04
             health_bonus = max(self.system_health - previous_health, 0) * 0.06
             health_cost = max(previous_health - self.system_health, 0) * 0.05
-            reward = round(reward + improvement_bonus + health_bonus - health_cost, 3)
+            raw_reward = round(raw_reward + improvement_bonus + health_bonus - health_cost, 3)
+            reward = normalize_reward(raw_reward)
+            self.latest_raw_reward = raw_reward
+            self.latest_reward = reward
+            self.cumulative_score += reward
             self.ai_interval_seconds = adaptive_interval(
                 self.system_health,
                 self.threat_score,
@@ -317,10 +406,11 @@ class CyberShieldEnv:
                 "state": self._snapshot(),
                 "executed_action": action,
                 "reason": reason,
-                "reward": reward,
-                "done": self.system_health <= 0,
-                "next_interval": self.ai_interval_seconds,
-            }
+                    "reward": reward,
+                    "raw_reward": raw_reward,
+                    "done": self.system_health <= 0 or self.current_step >= self.active_task.get("max_steps", 20),
+                    "next_interval": self.ai_interval_seconds,
+                }
 
     def step(self, action):
         with self.lock:
@@ -329,25 +419,31 @@ class CyberShieldEnv:
 
             previous_health = self.system_health
             previous_threat = self.threat_score
-            reward = self._apply_action_effect(action, reason="manual action")
+            raw_reward = self._apply_action_effect(action, reason="manual action")
             impact = self._calculate_attack_impact(action)
             self.system_health = max(0, min(100, self.system_health - impact))
+            self._stabilize_system_health(action)
             self.current_step += 1
             self._refresh_observability(scan_results=self._generate_ci_scan_results())
-            reward = round(
-                reward
+            raw_reward = round(
+                raw_reward
                 + max(previous_threat - self.threat_score, 0) * 0.03
                 + max(self.system_health - previous_health, 0) * 0.05
                 - max(previous_health - self.system_health, 0) * 0.05,
                 3,
             )
+            reward = normalize_reward(raw_reward)
+            self.latest_raw_reward = raw_reward
+            self.latest_reward = reward
+            self.cumulative_score += reward
             self.ai_interval_seconds = adaptive_interval(
                 self.system_health,
                 self.threat_score,
                 self._rapid_health_drop(),
             )
             self.latest_report_paths = self.vulnerability_manager.write_reports(self._report_payload())
-            return self._snapshot(), reward, self.system_health <= 0, {}
+            done = self.system_health <= 0 or self.current_step >= self.active_task.get("max_steps", 20)
+            return self._snapshot(), reward, done, {"raw_reward": raw_reward}
 
 
 if __name__ == "__main__":

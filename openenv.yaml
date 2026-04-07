@@ -1,10 +1,12 @@
 name: cyber_shield_env
 
 description: |
-  CyberShield is an AI cyber attack defence simulator.
-  Agents must detect malicious activity in network logs
-  and respond using defensive actions like blocking IPs,
-  patching vulnerabilities, and monitoring traffic.
+  CyberShield is a real-world cyber defense reinforcement learning environment.
+  The agent observes live attack telemetry, system health, active vulnerabilities,
+  and autonomous defense history, then chooses one of four actions:
+  scan the network, block hostile IPs, patch vulnerabilities, or monitor traffic.
+  Rewards are normalized to the 0.0–1.0 range while preserving the existing
+  CyberShield defense behavior internally.
 
 entrypoint: environment:CyberShieldEnv
 
@@ -23,10 +25,52 @@ observations:
       type: integer
     logs:
       type: array
+      items:
+        type: object
     system_health:
       type: integer
     blocked_ips:
       type: array
+      items:
+        type: string
+    threat_score:
+      type: integer
+    recommended_action:
+      type: string
+      nullable: true
+    last_decision_reason:
+      type: string
+    recent_actions:
+      type: array
+      items:
+        type: object
+    ai_interval_seconds:
+      type: integer
+    emergency_mode:
+      type: boolean
+    health_warning:
+      type: boolean
+    patched_vulnerabilities:
+      type: integer
+    defense_events_triggered:
+      type: integer
+    cumulative_score:
+      type: number
+    latest_reward:
+      type: number
+    latest_raw_reward:
+      type: number
+    active_task:
+      type: object
+
+reward:
+  type: number
+  range:
+    min: 0.0
+    max: 1.0
+  description: |
+    The environment preserves the existing CyberShield internal reward logic and
+    normalizes the externally returned reward to the 0.0–1.0 range.
 
 tasks:
   - tasks.easy_task:easy_task

@@ -10,6 +10,7 @@ from models import ActionRequest, ResetResponse, SettingsRequest, SettingsRespon
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger("cybershield.server")
 
+app = FastAPI(root_path="/")
 app = FastAPI()
 
 app.add_middleware(

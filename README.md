@@ -104,3 +104,45 @@ Health improvement is measured through:
 ```bash
 python3 -m unittest discover -s tests -v
 ```
+
+## OpenEnv RL Interface
+
+CyberShield now behaves as an OpenEnv-style reinforcement learning environment while preserving the existing cyber-defense logic.
+
+- `reset()` resets the environment and returns a typed RL state
+- `state()` returns the current typed observation
+- `step(action)` applies one RL action and returns a normalized reward in `0.0` to `1.0`
+
+### Reward Normalization Snippet
+
+```python
+from reward_utils import normalize_reward
+
+raw_reward = 1.18
+reward = normalize_reward(raw_reward)
+```
+
+### Structured Inference Logging
+
+The baseline [`inference.py`](./inference.py) now emits:
+
+- `[START]`
+- `[STEP]`
+- `[END]`
+
+for each task run.
+
+### Validator
+
+Run the local validator with:
+
+```bash
+python3 validator.py
+```
+
+It checks:
+
+- `openenv.yaml`
+- API endpoint compatibility
+- normalized rewards
+- task grading range compliance
