@@ -1,20 +1,22 @@
-from synthetic_logs import generate_logs
+from task_utils import build_task, grade_task
 
 def easy_task():
+    return build_task(
+        task_name="easy",
+        description="Low level cyber attack simulation",
+        max_steps=10,
+        seed=11,
+        log_count=3,
+        target_health=75,
+        success_reward=10,
+    )
 
-    return {
-        "task_name": "easy",
-        "description": "Low level cyber attack simulation",
-        "logs": generate_logs(3),
-        "max_steps": 10
-    }
 
-
-def grade(reward):
-
-    if reward > 3:
-        return 1.0
-    elif reward > 1:
-        return 0.5
-    else:
-        return 0.0
+def grade(result):
+    return grade_task(
+        cumulative_score=result["cumulative_score"],
+        final_health=result["final_health"],
+        blocked_ips=result["blocked_ips"],
+        patched_vulnerabilities=result["patched_vulnerabilities"],
+        success_reward=10,
+    )

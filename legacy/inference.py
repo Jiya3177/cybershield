@@ -1,98 +1,125 @@
+import importlib
+import json
 import random
-from environment import CyberShieldEnv
 
-# Possible actions
+from environment import CyberShieldEnv
+from reward_utils import normalize_average_reward, normalize_reward
+
+
 ACTIONS = [
     "scan_network",
     "block_ip",
     "patch_vulnerability",
-    "monitor_traffic"
+    "monitor_traffic",
+]
+
+TASKS = [
+    ("easy", "tasks.easy_task", "easy_task"),
+    ("medium", "tasks.medium_task", "medium_task"),
+    ("hard", "tasks.hard_task", "hard_task"),
 ]
 
 
-def run_episode(env, max_steps=20):
+def choose_action(observation):
+    logs = observation.get("logs", [])
+    health = observation.get("system_health", 100)
 
+    if any(log.get("attack_type") in {"ransomware", "malware"} for log in logs):
+        return "patch_vulnerability"
+    if health < 65:
+        return "monitor_traffic"
+    if sum(1 for log in logs if log.get("attack_type") == "ddos") >= 2:
+        return "block_ip"
+    return random.choice(["scan_network", "monitor_traffic"])
+
+
+def load_task(module_name, fn_name):
+    module = importlib.import_module(module_name)
+    task_factory = getattr(module, fn_name)
+    return task_factory()
+
+
+def load_grader(module_name):
+    module = importlib.import_module(module_name)
+    return getattr(module, "grade")
+
+
+def log_start(task):
+    print(f"[START] task={task['task_name']} max_steps={task['max_steps']} seed={task['seed']}")
+
+
+def log_step(index, action, reward, state):
+    print(
+        "[STEP] "
+        f"step={index} "
+        f"action={action} "
+        f"reward={reward:.4f} "
+        f"health={state['system_health']} "
+        f"threat_score={state['threat_score']} "
+        f"patched={state['patched_vulnerabilities']}"
+    )
+
+
+def log_end(task_name, score, result):
+    print(
+        "[END] "
+        f"task={task_name} "
+        f"score={score:.4f} "
+        f"final_health={result['final_health']} "
+        f"blocked_ips={result['blocked_ips']} "
+        f"patched_vulnerabilities={result['patched_vulnerabilities']}"
+    )
+
+
+def run_task(env, task, grader):
+    env.configure_task(task)
     observation = env.reset()
+    total_reward = 0.0
+    steps_taken = 0
 
-    total_reward = 0
+    log_start(task)
 
-    for step in range(max_steps):
+    for step_index in range(1, task["max_steps"] + 1):
+        action = choose_action(observation)
+        observation, reward, done, info = env.step(action)
 
-        # simple baseline strategy
-        action = random.choice(ACTIONS)
-
-        observation, reward, done, _ = env.step(action)
-
-        total_reward += reward
-
-        print(f"Step {step+1}")
-        print("Action:", action)
-        print("Reward:", reward)
-        print("System Health:", observation["system_health"])
-        print("------")
+        # Reward normalization snippet for RL/OpenEnv compliance.
+        normalized_reward = normalize_reward(info.get("raw_reward", reward))
+        total_reward += normalized_reward
+        steps_taken = step_index
+        log_step(step_index, action, normalized_reward, observation)
 
         if done:
             break
 
-    return total_reward
+    result = env.task_result()
+    result["cumulative_score"] = normalize_average_reward(total_reward, steps_taken)
+    score = grader(result)
+    log_end(task["task_name"], score, result)
+    return {
+        "task": task["task_name"],
+        "score": score,
+        "result": result,
+    }
 
 
 def main():
-
+    random.seed(7)
     env = CyberShieldEnv()
+    scores = []
 
-    print("Starting CyberShield simulation...")
+    for task_name, module_name, fn_name in TASKS:
+        task = load_task(module_name, fn_name)
+        grader = load_grader(module_name)
+        run_data = run_task(env, task, grader)
+        scores.append(run_data["score"])
 
-    score = run_episode(env)
-
-    print("\nFinal Score:", score)
+    summary = {
+        "tasks": [task_name for task_name, _, _ in TASKS],
+        "average_score": round(sum(scores) / len(scores), 4),
+    }
+    print(json.dumps(summary))
 
 
 if __name__ == "__main__":
     main()
-import requests
-import random
-import time
-
-BASE_URL = "http://127.0.0.1:8000"
-
-ACTIONS = [
-    "scan_network",
-    "block_ip",
-    "patch_vulnerability",
-    "monitor_traffic"
-]
-
-def run_agent(steps=10):
-
-    print("Starting AI Cyber Defense Agent...\n")
-
-    # Reset environment
-    r = requests.post(f"{BASE_URL}/reset")
-    state = r.json()["state"]
-
-    for step in range(steps):
-
-        action = random.choice(ACTIONS)
-
-        print(f"\nStep {step+1}")
-        print(f"Chosen action: {action}")
-
-        response = requests.post(
-            f"{BASE_URL}/step",
-            json={"action": action}
-        )
-
-        data = response.json()
-
-        print("Reward:", data["reward"])
-        print("System Health:", data["state"]["system_health"])
-        print("Blocked IPs:", data["state"]["blocked_ips"])
-
-        time.sleep(1)
-
-    print("\nAgent finished simulation.")
-
-
-if __name__ == "__main__":
-    run_agent()
