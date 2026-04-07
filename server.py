@@ -4,8 +4,8 @@ import logging
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from environment import CyberShieldEnv
+from models import ActionRequest, ResetResponse, SettingsRequest, SettingsResponse, StateModel, StepResponse
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger("cybershield.server")
@@ -22,10 +22,6 @@ app.add_middleware(
 
 env = CyberShieldEnv()
 ai_loop_task = None
-
-
-class ActionRequest(BaseModel):
-    action: str
 
 
 async def autonomous_defense_loop():
@@ -60,7 +56,16 @@ async def shutdown_event():
         ai_loop_task = None
 
 
-@app.post("/reset")
+@app.get("/")
+def root():
+    return {
+        "status": "CyberShield OpenEnv running",
+        "docs": "/docs",
+        "endpoints": ["/reset", "/step", "/state"]
+    }
+
+
+@app.post("/reset", response_model=ResetResponse)
 def reset():
     state = env.reset()
 
@@ -70,20 +75,33 @@ def reset():
     }
 
 
-@app.post("/step")
+@app.post("/step", response_model=StepResponse)
 def step(request: ActionRequest):
     if request.action not in env.actions:
         raise HTTPException(status_code=400, detail=f"Unsupported action: {request.action}")
 
-    state, reward, done, _ = env.step(request.action)
+    state, reward, done, info = env.step(request.action)
 
     return {
         "state": state,
         "reward": reward,
+        "raw_reward": info.get("raw_reward"),
         "done": done
     }
 
 
-@app.get("/state")
+@app.post("/settings", response_model=SettingsResponse)
+def update_settings(request: SettingsRequest):
+    state = env.update_settings(
+        agent_name=request.agent_name,
+        display_preferences=request.display_preferences,
+    )
+    return {
+        "status": "settings updated",
+        "state": state,
+    }
+
+
+@app.get("/state", response_model=StateModel)
 def state():
     return env.state()
