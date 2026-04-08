@@ -5,6 +5,7 @@ description = "CyberShield OpenEnv RL environment for cybersecurity defense simu
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+  "openenv-core>=0.2.0",
   "fastapi",
   "uvicorn",
   "pydantic",
@@ -12,3 +13,6 @@ dependencies = [
   "numpy",
   "PyYAML",
 ]
+
+[project.scripts]
+server = "server:app"

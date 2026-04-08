@@ -1,0 +1,28 @@
+version = 1
+revision = 1
+requires-python = ">=3.10"
+
+[[package]]
+name = "cybershield-openenv"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+  { name = "openenv-core" },
+  { name = "fastapi" },
+  { name = "uvicorn" },
+  { name = "pydantic" },
+  { name = "requests" },
+  { name = "numpy" },
+  { name = "pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [
+  { name = "openenv-core", specifier = ">=0.2.0" },
+  { name = "fastapi" },
+  { name = "uvicorn" },
+  { name = "pydantic" },
+  { name = "requests" },
+  { name = "numpy" },
+  { name = "PyYAML" },
+]
