@@ -12,6 +12,7 @@ dependencies = [
   "requests",
   "numpy",
   "PyYAML",
+  "openai",
 ]
 
 [project.scripts]
