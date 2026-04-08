@@ -1,3 +1,13 @@
+---
+title: CyberShield OpenEnv
+emoji: shield
+colorFrom: green
+colorTo: gray
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # CyberShield Autonomous Defense Platform
 
 CyberShield is a FastAPI-based cybersecurity simulator with an autonomous AI defense layer. The platform now detects vulnerable conditions from attack telemetry, stages and validates patches automatically, strengthens defense responses, and reports measurable health recovery after each automation cycle.

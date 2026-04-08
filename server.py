@@ -1,25 +1,47 @@
 import asyncio
 import contextlib
 import logging
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from environment import CyberShieldEnv
 from models import ActionRequest, ResetResponse, SettingsRequest, SettingsResponse, StateModel, StepResponse
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger("cybershield.server")
 
-app = FastAPI(root_path="/")
-app = FastAPI()
+app = FastAPI(title="CyberShield OpenEnv API")
+
+ROOT_DIR = Path(__file__).resolve().parent
+FRONTEND_BUILD_DIRS = [
+    ROOT_DIR / "frontend" / "dist",
+    ROOT_DIR / "cybershield-dashboard" / "frontend" / "dist",
+    ROOT_DIR / "legacy" / "cybershield-dashboard" / "frontend" / "dist",
+]
+
+
+def find_frontend_build_dir():
+    for build_dir in FRONTEND_BUILD_DIRS:
+        if (build_dir / "index.html").exists():
+            return build_dir
+    return None
+
+
+frontend_build_dir = find_frontend_build_dir()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+if frontend_build_dir is not None and (frontend_build_dir / "assets").exists():
+    app.mount("/assets", StaticFiles(directory=frontend_build_dir / "assets"), name="assets")
 
 env = CyberShieldEnv()
 ai_loop_task = None
@@ -59,6 +81,9 @@ async def shutdown_event():
 
 @app.get("/")
 def root():
+    if frontend_build_dir is not None:
+        return FileResponse(frontend_build_dir / "index.html")
+
     return {
         "status": "CyberShield API running",
         "service": "CyberShield OpenEnv",
@@ -69,6 +94,17 @@ def root():
             "/step"
         ]
     }
+
+
+@app.get("/{full_path:path}")
+def spa_fallback(full_path: str):
+    if full_path.startswith(("state", "reset", "step", "settings", "docs", "openapi.json")):
+        raise HTTPException(status_code=404, detail="Not found")
+
+    if frontend_build_dir is not None:
+        return FileResponse(frontend_build_dir / "index.html")
+
+    raise HTTPException(status_code=404, detail="Not found")
 
 
 @app.post("/reset", response_model=ResetResponse)
