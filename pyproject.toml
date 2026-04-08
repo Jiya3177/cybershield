@@ -1,0 +1,14 @@
+[project]
+name = "cybershield-openenv"
+version = "0.1.0"
+description = "CyberShield OpenEnv RL environment for cybersecurity defense simulation"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi",
+  "uvicorn",
+  "pydantic",
+  "requests",
+  "numpy",
+  "PyYAML",
+]
