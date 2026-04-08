@@ -42,6 +42,18 @@ Choose the safest high-signal action based on current health, threat score, and 
 Respond with only the action string."""
 
 
+def fallback_action(observation: dict) -> str:
+    logs = observation.get("logs", [])
+    health = observation.get("system_health", 100)
+    if any(log.get("attack_type") in {"ransomware", "malware"} for log in logs):
+        return "patch_vulnerability"
+    if health < 65:
+        return "monitor_traffic"
+    if sum(1 for log in logs if log.get("attack_type") == "ddos") >= 2:
+        return "block_ip"
+    return "scan_network"
+
+
 def make_client():
     api_base_url = os.environ.get("API_BASE_URL")
     api_key = os.environ.get("API_KEY")
@@ -70,16 +82,19 @@ def choose_action(client: OpenAI, observation: dict) -> str:
         "allowed_actions": ACTIONS,
     }
 
-    response = client.chat.completions.create(
-        model=model_name(),
-        temperature=0,
-        max_tokens=8,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": json.dumps(prompt)},
-        ],
-    )
-    content = (response.choices[0].message.content or "").strip()
+    try:
+        response = client.chat.completions.create(
+            model=model_name(),
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": json.dumps(prompt)},
+            ],
+        )
+        content = (response.choices[0].message.content or "").strip()
+    except Exception as exc:
+        print(f"warning: LLM proxy call failed, falling back to safe baseline: {exc}", file=sys.stderr)
+        return fallback_action(observation)
+
     action = content.split()[0].strip().strip('"').strip("'").strip(",")
     if action not in ACTIONS:
         # Keep evaluation robust if the model returns extra words.
@@ -87,7 +102,7 @@ def choose_action(client: OpenAI, observation: dict) -> str:
         for candidate in ACTIONS:
             if candidate in lowered:
                 return candidate
-        return "monitor_traffic"
+        return fallback_action(observation)
     return action
 
 
