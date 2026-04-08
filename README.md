@@ -156,3 +156,11 @@ It checks:
 - API endpoint compatibility
 - normalized rewards
 - task grading range compliance
+
+
+
+## Team
+
+Team: ByteBuddies  
+Members:  Nitya Patel, Jiya Patel
+
