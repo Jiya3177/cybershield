@@ -6,7 +6,7 @@ import uvicorn
 
 
 def _load_server_app():
-    server_path = Path(__file__).resolve().with_name("server.py")
+    server_path = Path(__file__).resolve().parents[1] / "server.py"
     spec = importlib.util.spec_from_file_location("cybershield_server_module", server_path)
     module = importlib.util.module_from_spec(spec)
     assert spec is not None and spec.loader is not None
@@ -16,5 +16,6 @@ def _load_server_app():
 
 app = _load_server_app()
 
+
 def main():
-    uvicorn.run("app:app", host="0.0.0.0", port=int(os.getenv("PORT", "7860")))
+    uvicorn.run("server.app:app", host="0.0.0.0", port=int(os.getenv("PORT", "7860")))
