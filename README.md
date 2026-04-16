@@ -161,6 +161,5 @@ It checks:
 
 ## Team
 
-Team: ByteBuddies  
 Members:  Nitya Patel, Jiya Patel
 
